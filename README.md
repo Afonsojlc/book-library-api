@@ -8,9 +8,7 @@
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License" />
 </p>
 
-A RESTful library catalog and reservation API built with **Laravel 11**, **Eloquent ORM**, and **Laravel Sanctum**.
-
-It manages books, authors, and reader loan reservations with role-based permissions (Reader and Admin).
+> A RESTful library catalog and reservation API built with **Laravel 11**, **Eloquent ORM**, and **Laravel Sanctum**. It manages books, authors, and reader loan reservations with role-based permissions (Reader and Admin).
 
 ---
 
