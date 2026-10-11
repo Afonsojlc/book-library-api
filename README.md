@@ -1,19 +1,18 @@
-﻿# 📚 Book Library & Reservation API
+# 📚 Book Library & Reservation API
 
 <p align="center">
   <img src="https://img.shields.io/badge/Laravel-11.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 11" />
   <img src="https://img.shields.io/badge/PHP-8.3%2B-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.3+" />
   <img src="https://img.shields.io/badge/Sanctum-Auth-F05340?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel Sanctum" />
   <img src="https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite" />
-  <img src="https://img.shields.io/badge/Postman-FF6C37?style=for-the-badge&logo=postman&logoColor=white" alt="Postman" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License" />
 </p>
 
-> A robust, enterprise-grade RESTful API engineered with **Laravel 11**, **Eloquent ORM**, and **Laravel Sanctum**. Built for digital library catalog management, literary author archiving, and multi-book reservation workflows featuring Many-to-Many pivot relations and Role-Based Access Control (**RBAC**).
+> A RESTful library catalog and reservation API built with **Laravel 11**, **Eloquent ORM**, and **Laravel Sanctum**. It manages books, authors, and reader loan reservations with role-based permissions (Reader and Admin).
 
 ---
 
-## ⚡ Role-Based Access Hierarchy (RBAC)
+## ⚡ Access Hierarchy (RBAC)
 
 ```mermaid
 flowchart TD
@@ -22,22 +21,22 @@ flowchart TD
     RoleCheck{CheckRole Middleware}
 
     subgraph Tier1 ["🌐 1. Public Access"]
-        T1_Register["User Registration (Default 'leitor' role)"]
+        T1_Register["User Registration (default 'leitor' role)"]
         T1_Login["User Authentication & Token Issuance"]
     end
 
-    subgraph Tier2 ["📖 2. Reader Access (role:leitor)"]
-        T2_Catalog["Search Books Catalog with Filters (Genre, Availability)"]
+    subgraph Tier2 ["📖 2. Reader Access (role: leitor)"]
+        T2_Catalog["Search Books Catalog (Genre, Availability filters)"]
         T2_Authors["Browse Authors and Bibliography"]
         T2_Reserve["Submit Book Reservations with Quantities"]
         T2_MyLoans["View Personal Reservation History"]
     end
 
-    subgraph Tier3 ["🛡️ 3. Administrator Access (role:admin)"]
+    subgraph Tier3 ["🛡️ 3. Administrator Access (role: admin)"]
         T3_Books["Full Catalog CRUD (Create, Update, Delete Books)"]
-        T3_Authors["Author Archive Management (Create, Update, Delete)"]
-        T3_Reservations["Audit All Library Reservations"]
-        T3_Status["Update Loan Lifecycle (Pendente -> Ativa -> Devolvida)"]
+        T3_Authors["Author Management (Create, Update, Delete)"]
+        T3_Reservations["View All Library Reservations"]
+        T3_Status["Update Loan Status (Pendente -> Ativa -> Devolvida)"]
     end
 
     Client --> T1_Register
@@ -50,7 +49,7 @@ flowchart TD
 
 ---
 
-## 📊 Database Schema & Relationships (ERD)
+## 📊 Database Schema (ERD)
 
 ```mermaid
 erDiagram
@@ -108,27 +107,25 @@ erDiagram
 
 ---
 
-## 🔄 Book Reservation Lifecycle
+## 🔄 Reservation Status Lifecycle
 
 ```mermaid
 stateDiagram-v2
     [*] --> Pendente : Reader submits loan request
-    Pendente --> Ativa : Librarian/Admin approves & loans books
-    Ativa --> Devolvida : Reader returns books to library
-    Devolvida --> [*] : Reservation Completed
+    Pendente --> Ativa : Admin approves loan
+    Ativa --> Devolvida : Books returned
+    Devolvida --> [*] : Loan closed
 ```
 
 ---
 
-## ✨ Key Architectural Highlights
+## ✨ Features
 
-* **Clean RBAC Isolation:** Custom `CheckRole` middleware separates reader interactions from administrative catalog management.
-* **Many-to-Many Pivot Table:** The `livro_reserva` intermediate table tracks individual copies (`quantidade`) per reservation request.
-* **Smart Catalog Querying:** Built-in Eloquent filtering for books by genre and availability:
-  * `?genero=Romance`
-  * `?disponivel=true`
-* **Defensive Date Validation:** Enforces logical circulation rules: start dates must be today or future (`after_or_equal:today`), and return dates must succeed start dates (`after:data_reserva`).
-* **Automated Feature Tests:** Test suite in `tests/Feature/BookLibraryApiTest.php` covering authentication, catalog searching, loan submissions, and RBAC restrictions.
+* **Role-Based Access Control:** Custom `CheckRole` middleware isolates reader actions from administrative management.
+* **Many-to-Many Pivot Table:** Intermediate table (`livro_reserva`) stores requested copy quantities per reservation.
+* **Catalog Filtering:** Eloquent queries support filtering books by genre and availability (`?genero=Romance&disponivel=true`).
+* **Date Validation:** Enforces circulation rules ensuring loan start dates are not in the past and return dates occur after start dates.
+* **Automated Feature Tests:** Test suite verifying authentication, catalog queries, reservation workflows, and role restrictions.
 
 ---
 
@@ -136,36 +133,36 @@ stateDiagram-v2
 
 ### 🔐 Authentication (`/api`)
 
-| Method | Endpoint | Access | Description | Payload Example |
-| :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/register` | Public | Register new user (defaults to `leitor`) | `{"name": "Ana", "email": "ana@ex.pt", "password": "pass", "role": "leitor"}` |
-| `POST` | `/api/login` | Public | Authenticate and issue Sanctum token | `{"email": "ana@ex.pt", "password": "pass"}` |
-| `GET` | `/api/me` | 🔒 **Authenticated** | Get current authenticated user profile | _None_ |
-| `POST` | `/api/logout` | 🔒 **Authenticated** | Revoke current access token | _None_ |
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/register` | Public | Register new user (defaults to `leitor`) |
+| `POST` | `/api/login` | Public | Authenticate and issue Sanctum token |
+| `GET` | `/api/me` | 🔒 Authenticated | Get authenticated user profile |
+| `POST` | `/api/logout` | 🔒 Authenticated | Revoke access token |
 
 ### 📚 Catalog (Books & Authors)
 
-| Method | Endpoint | Access | Description | Payload Example |
-| :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/api/livros` | 🔒 **Authenticated** | List books with author info (`?genero=Poesia&disponivel=true`) | _None_ |
-| `GET` | `/api/livros/{id}` | 🔒 **Authenticated** | Get details of a single book | _None_ |
-| `POST` | `/api/livros` | 🛡️ **Admin Only** | Add new book to catalog | `{"titulo": "Os Maias", "isbn": "978...", "ano_publicacao": 1888, "genero": "Romance", "exemplares_disponiveis": 5, "autor_id": 1}` |
-| `PUT` | `/api/livros/{id}` | 🛡️ **Admin Only** | Update book information | `{"exemplares_disponiveis": 4}` |
-| `DELETE` | `/api/livros/{id}` | 🛡️ **Admin Only** | Remove book from catalog | _None_ |
-| `GET` | `/api/autores` | 🔒 **Authenticated** | List authors with book counts | _None_ |
-| `GET` | `/api/autores/{id}` | 🔒 **Authenticated** | Get author details with books | _None_ |
-| `POST` | `/api/autores` | 🛡️ **Admin Only** | Create author record | `{"nome": "Fernando Pessoa", "nacionalidade": "Portuguesa"}` |
-| `PUT` | `/api/autores/{id}` | 🛡️ **Admin Only** | Update author record | `{"biografia": "Famous Portuguese poet..."}` |
-| `DELETE` | `/api/autores/{id}` | 🛡️ **Admin Only** | Remove author record | _None_ |
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/livros` | 🔒 Authenticated | List books (`?genero=Poesia&disponivel=true`) |
+| `GET` | `/api/livros/{id}` | 🔒 Authenticated | Get book details |
+| `POST` | `/api/livros` | 🛡️ Admin Only | Create new book in catalog |
+| `PUT` | `/api/livros/{id}` | 🛡️ Admin Only | Update book information |
+| `DELETE` | `/api/livros/{id}` | 🛡️ Admin Only | Remove book from catalog |
+| `GET` | `/api/autores` | 🔒 Authenticated | List authors with book counts |
+| `GET` | `/api/autores/{id}` | 🔒 Authenticated | Get author details |
+| `POST` | `/api/autores` | 🛡️ Admin Only | Create author record |
+| `PUT` | `/api/autores/{id}` | 🛡️ Admin Only | Update author record |
+| `DELETE` | `/api/autores/{id}` | 🛡️ Admin Only | Remove author record |
 
 ### 📅 Book Reservations (`/api/reservas`)
 
-| Method | Endpoint | Access | Description | Payload Example |
-| :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/api/reservas/minhas` | 📖 **Reader Only** | Retrieve reader's personal reservations | _None_ |
-| `POST` | `/api/reservas` | 📖 **Reader Only** | Submit book reservation request | `{"data_reserva": "2026-10-01", "data_devolucao": "2026-10-15", "livros": [{"id": 1, "quantidade": 1}]}` |
-| `GET` | `/api/reservas` | 🛡️ **Admin Only** | View all library reservations (Paginated) | _None_ |
-| `PATCH` | `/api/reservas/{id}` | 🛡️ **Admin Only** | Update loan state (`pendente`, `ativa`, `devolvida`) | `{"estado": "ativa"}` |
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/reservas/minhas` | 📖 Reader Only | List reader's own reservations |
+| `POST` | `/api/reservas` | 📖 Reader Only | Create reservation request |
+| `GET` | `/api/reservas` | 🛡️ Admin Only | View all reservations (paginated) |
+| `PATCH` | `/api/reservas/{id}` | 🛡️ Admin Only | Update status (`pendente`, `ativa`, `devolvida`) |
 
 ---
 
@@ -173,29 +170,29 @@ stateDiagram-v2
 
 | Role | Email | Password | Privileges |
 | :--- | :--- | :--- | :--- |
-| **Administrator** | `admin@biblioteca.pt` | `admin123` | Full catalog management (CRUD books & authors) and loan lifecycle moderation |
-| **Reader (`leitor`)** | `joao@exemplo.pt` | `leitor123` | Can search books, book reservations, and view personal loan history |
+| **Administrator** | `admin@biblioteca.pt` | `admin123` | Full catalog CRUD & reservation status management |
+| **Reader (`leitor`)** | `joao@exemplo.pt` | `leitor123` | Book search, reservation submissions, and personal history |
 
 ---
 
-## 🛠️ Quickstart & Local Setup
+## 🛠️ Getting Started
 
-### 1. Prerequisites
+### Prerequisites
 * **PHP 8.3+** with SQLite extension
 * **Composer**
 
-### 2. Clone the Repository
+### 1. Clone the repository
 ```bash
 git clone https://github.com/Afonsojlc/book-library-api.git
 cd book-library-api
 ```
 
-### 3. Install Dependencies
+### 2. Install dependencies
 ```bash
 composer install
 ```
 
-### 4. Configure Environment
+### 3. Environment setup
 ```bash
 cp .env.example .env
 php artisan key:generate
@@ -205,73 +202,69 @@ Ensure your `.env` contains:
 DB_CONNECTION=sqlite
 ```
 
-### 5. Initialize & Seed Database
+### 4. Database initialization & seed
 ```bash
 touch database/database.sqlite
 php artisan migrate:fresh --seed
 ```
 
-### 6. Start the Server
+### 5. Run the server
 ```bash
 php artisan serve
 ```
-The API is available at: `http://127.0.0.1:8000/api`
+The API will be available at: `http://127.0.0.1:8000/api`
 
 ---
 
-## 🧪 Running Automated Tests
+## 🧪 Running Tests
 
-Run the feature test suite:
+To run the feature test suite:
 ```bash
 php artisan test
 ```
 
 ---
 
-## 📬 Postman Suite Testing
+## 📬 Testing with Postman
 
-Ready-to-use Postman files are available inside the [`Postman/`](Postman/) folder:
+Postman files are included in the [`Postman/`](Postman/) directory:
 * [`Postman/book-library-api.postman_collection.json`](Postman/book-library-api.postman_collection.json)
 * [`Postman/book-library-api.postman_environment.json`](Postman/book-library-api.postman_environment.json)
 
-### Instructions:
-1. Open **Postman** and click **Import**.
-2. Select both JSON files inside the `Postman/` folder.
-3. Choose the **Book Library API** environment.
-4. Execute the **Login** request (`admin@biblioteca.pt` or `joao@exemplo.pt`) to automatically populate the `{{token}}` variable.
+1. Import both JSON files into Postman.
+2. Select the **Book Library API** environment.
+3. Run the **Login** request to authenticate and automatically populate the `{{token}}` variable.
 
 ---
 
-## 📁 Repository Structure
+## 📁 Project Structure
 
 ```text
 book-library-api/
 ├── app/
 │   ├── Http/
-│   │   ├── Controllers/          # Auth, Autor, Livro, and Reserva controllers
-│   │   └── Middleware/           # CheckRole RBAC middleware
+│   │   ├── Controllers/          # Auth, Autor, Livro, Reserva controllers
+│   │   └── Middleware/           # CheckRole middleware
 │   └── Models/                   # Autor, Livro, Reserva, User models
 ├── database/
-│   ├── migrations/               # Schema definitions (including livro_reserva pivot)
-│   └── seeders/                  # Seeders (Saramago, Pessoa, Eça de Queirós, users)
-├── docs/
-│   └── manual_laravel_biblioteca.md # Documentation & assignment archive
+│   ├── migrations/               # Schema definitions
+│   └── seeders/                  # Demo seeders
 ├── routes/
-│   └── api.php                   # Public, Reader, and Admin routes
+│   └── api.php                   # API route declarations
 ├── tests/
 │   └── Feature/
-│       └── BookLibraryApiTest.php # Feature test suite
-├── Postman/                      # Postman collection & environment
-├── composer.json                 # Project dependencies
-└── README.md                     # Comprehensive documentation
+│       └── BookLibraryApiTest.php # Feature tests
+├── Postman/                      # Postman collections
+├── composer.json
+└── README.md
 ```
 
 ---
 
 ## 👤 Author
 
-**Afonso Carvalho**
-* GitHub: [@Afonsojlc](https://github.com/Afonsojlc)
+**Afonso Carvalho**  
+* GitHub: [@Afonsojlc](https://github.com/Afonsojlc)  
 * LinkedIn: [Afonso Carvalho](https://www.linkedin.com/in/afonso-carvalho-64796328a/)
 
 ---
